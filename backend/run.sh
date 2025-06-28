@@ -10,5 +10,17 @@ pip install -r requirements.txt || {
     pip install fastapi uvicorn "pydantic[email]" python-jose PyJWT passlib python-multipart sqlalchemy email-validator
 }
 
-echo "Starting backend server..."
-python3 main.py
+echo "Starting backend server in background..."
+nohup python3 main.py > server.log 2>&1 &
+echo "Backend server started with PID: $!"
+echo "Server logs are written to server.log"
+
+# Wait a moment for server to start
+sleep 3
+
+# Check if server is running
+if curl -s http://localhost:8080/docs > /dev/null; then
+    echo "✅ Backend server is running successfully at http://localhost:8080"
+else
+    echo "❌ Backend server failed to start. Check server.log for details."
+fi
