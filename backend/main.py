@@ -555,8 +555,8 @@ async def cancel_match_request(request_id: int, db: Session = Depends(get_db), c
         status=request.status
     )
 
-# Include API router
-app.include_router(api_router)
+# Include API router with /api prefix
+app.include_router(api_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
