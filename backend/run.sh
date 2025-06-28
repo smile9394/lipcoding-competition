@@ -7,7 +7,7 @@ echo "Installing Python dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt || {
     echo "Warning: Some dependencies failed to install. Trying individual installation..."
-    pip install fastapi uvicorn pydantic python-jose passlib python-multipart sqlalchemy
+    pip install fastapi uvicorn pydantic python-jose PyJWT passlib python-multipart sqlalchemy
 }
 
 echo "Starting backend server..."
