@@ -196,7 +196,13 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(status_code=401, detail="Missing authorization header")
     
     try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            credentials.credentials, 
+            SECRET_KEY, 
+            algorithms=[ALGORITHM],
+            audience="mentor-mentee-users",
+            issuer="mentor-mentee-app"
+        )
         return payload
     except ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
