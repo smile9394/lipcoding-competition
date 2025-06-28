@@ -29,7 +29,21 @@
 
 ## 🛠️ 설치 및 실행
 
-### 백엔드 실행
+### 🚀 전체 앱 실행 (권장)
+
+\`\`\`bash
+# 루트 디렉토리에서 실행
+./start.sh
+\`\`\`
+
+앱이 자동으로 시작됩니다:
+- 프론트엔드: http://localhost:3000
+- 백엔드 API: http://localhost:8080  
+- Swagger UI: http://localhost:8080/docs
+
+### 개별 실행
+
+#### 백엔드 실행
 
 \`\`\`bash
 cd backend
@@ -40,7 +54,7 @@ python main.py
 백엔드 서버: http://localhost:8080
 API 문서: http://localhost:8080/docs
 
-### 프론트엔드 실행
+#### 프론트엔드 실행
 
 \`\`\`bash
 cd frontend
