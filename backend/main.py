@@ -1,15 +1,18 @@
 import os
-from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile, APIRouter
+from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile, APIRouter, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import Response, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime, timedelta
 import jwt
+from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
 from passlib.context import CryptContext
 import base64
 try:
@@ -33,7 +36,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 # Database Models
 class User(Base):
@@ -128,6 +131,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Exception handlers
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=400,
+        content={"detail": "Validation error"}
+    )
+
 # Create API router
 api_router = APIRouter()
 
@@ -180,12 +192,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Missing authorization header")
+    
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except jwt.ExpiredSignatureError:
+    except ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.JWTError:
+    except InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+    except Exception:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
 
 def get_current_user(db: Session = Depends(get_db), token_data: dict = Depends(verify_token)):
@@ -201,6 +218,10 @@ async def root():
 
 @api_router.post("/signup", status_code=201)
 async def signup(request: SignupRequest, db: Session = Depends(get_db)):
+    # Validate role
+    if request.role not in ["mentor", "mentee"]:
+        raise HTTPException(status_code=400, detail="Role must be either 'mentor' or 'mentee'")
+    
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == request.email).first()
     if existing_user:
@@ -276,14 +297,16 @@ async def update_profile(request: UpdateProfileRequest, db: Session = Depends(ge
         try:
             # Decode base64 image
             image_data = base64.b64decode(request.image)
-            image = Image.open(io.BytesIO(image_data))
             
-            # Validate image format and size
-            if image.format not in ['JPEG', 'PNG']:
-                raise HTTPException(status_code=400, detail="Image must be JPEG or PNG format")
-            
-            if image.size[0] < 500 or image.size[1] < 500 or image.size[0] > 1000 or image.size[1] > 1000:
-                raise HTTPException(status_code=400, detail="Image must be between 500x500 and 1000x1000 pixels")
+            if PIL_AVAILABLE:
+                image = Image.open(io.BytesIO(image_data))
+                
+                # Validate image format and size
+                if image.format not in ['JPEG', 'PNG']:
+                    raise HTTPException(status_code=400, detail="Image must be JPEG or PNG format")
+                
+                if image.size[0] < 500 or image.size[1] < 500 or image.size[0] > 1000 or image.size[1] > 1000:
+                    raise HTTPException(status_code=400, detail="Image must be between 500x500 and 1000x1000 pixels")
             
             if len(image_data) > 1024 * 1024:  # 1MB
                 raise HTTPException(status_code=400, detail="Image must be less than 1MB")
