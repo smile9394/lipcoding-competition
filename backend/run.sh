@@ -4,7 +4,11 @@
 cd "$(dirname "$0")"
 
 echo "Installing Python dependencies..."
-pip install -r requirements.txt
+pip install --upgrade pip
+pip install -r requirements.txt || {
+    echo "Warning: Some dependencies failed to install. Trying individual installation..."
+    pip install fastapi uvicorn pydantic python-jose passlib python-multipart sqlalchemy
+}
 
 echo "Starting backend server..."
 python3 main.py

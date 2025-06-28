@@ -12,7 +12,12 @@ from datetime import datetime, timedelta
 import jwt
 from passlib.context import CryptContext
 import base64
-from PIL import Image
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    print("Warning: Pillow not available. Image processing will be limited.")
 import io
 import uuid
 
@@ -124,7 +129,7 @@ app = FastAPI(
 )
 
 # Create API router
-api_router = APIRouter(prefix="/api")
+api_router = APIRouter()
 
 # Add CORS middleware
 app.add_middleware(
